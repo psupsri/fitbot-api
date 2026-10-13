@@ -1,0 +1,192 @@
+[
+  {
+    "name": "identity",
+    "checks": "บัญชีเชื่อมกับ Google Health แล้ว (ตรวจ ACCOUNT_NOT_LINKED) และ health user id",
+    "column": "oauth_credentials.health_user_id",
+    "method": "GET",
+    "path": "/v4/users/me/identity"
+  },
+  {
+    "name": "profile",
+    "checks": "อายุจาก profile (FR22)",
+    "column": "users.age",
+    "method": "GET",
+    "path": "/v4/users/me/profile"
+  },
+
+  {
+    "name": "rollup-steps",
+    "checks": "ก้าวเดินรายวัน",
+    "column": "daily_activity.steps",
+    "method": "POST",
+    "path": "/v4/users/me/dataTypes/steps/dataPoints:dailyRollUp",
+    "body": {"range": {"start": {"date": {"year": "{y}", "month": "{m}", "day": "{d}"}}, "end": {"date": {"year": "{ny}", "month": "{nm}", "day": "{nd}"}}}, "windowSizeDays": 1}
+  },
+  {
+    "name": "rollup-distance",
+    "checks": "ระยะทางรายวัน",
+    "column": "daily_activity.distance_m",
+    "method": "POST",
+    "path": "/v4/users/me/dataTypes/distance/dataPoints:dailyRollUp",
+    "body": {"range": {"start": {"date": {"year": "{y}", "month": "{m}", "day": "{d}"}}, "end": {"date": {"year": "{ny}", "month": "{nm}", "day": "{nd}"}}}, "windowSizeDays": 1}
+  },
+  {
+    "name": "rollup-floors",
+    "checks": "จำนวนชั้นรายวัน (Fitbit Air อาจไม่มี barometer)",
+    "column": "daily_activity.floors",
+    "method": "POST",
+    "path": "/v4/users/me/dataTypes/floors/dataPoints:dailyRollUp",
+    "body": {"range": {"start": {"date": {"year": "{y}", "month": "{m}", "day": "{d}"}}, "end": {"date": {"year": "{ny}", "month": "{nm}", "day": "{nd}"}}}, "windowSizeDays": 1}
+  },
+  {
+    "name": "rollup-total-calories",
+    "checks": "พลังงานที่ใช้ทั้งวัน (รวม BMR)",
+    "column": "daily_activity.energy_kcal",
+    "method": "POST",
+    "path": "/v4/users/me/dataTypes/total-calories/dataPoints:dailyRollUp",
+    "body": {"range": {"start": {"date": {"year": "{y}", "month": "{m}", "day": "{d}"}}, "end": {"date": {"year": "{ny}", "month": "{nm}", "day": "{nd}"}}}, "windowSizeDays": 1}
+  },
+  {
+    "name": "rollup-active-energy-burned",
+    "checks": "พลังงานจากกิจกรรม (ไม่รวม BMR) ทางเลือกแทน total-calories",
+    "column": "daily_activity.energy_kcal (ทางเลือก)",
+    "method": "POST",
+    "path": "/v4/users/me/dataTypes/active-energy-burned/dataPoints:dailyRollUp",
+    "body": {"range": {"start": {"date": {"year": "{y}", "month": "{m}", "day": "{d}"}}, "end": {"date": {"year": "{ny}", "month": "{nm}", "day": "{nd}"}}}, "windowSizeDays": 1}
+  },
+  {
+    "name": "rollup-active-zone-minutes",
+    "checks": "Active Zone Minutes รายวัน (ใช้เทียบเป้าหมาย WHO)",
+    "column": "daily_activity.active_zone_min",
+    "method": "POST",
+    "path": "/v4/users/me/dataTypes/active-zone-minutes/dataPoints:dailyRollUp",
+    "body": {"range": {"start": {"date": {"year": "{y}", "month": "{m}", "day": "{d}"}}, "end": {"date": {"year": "{ny}", "month": "{nm}", "day": "{nd}"}}}, "windowSizeDays": 1}
+  },
+  {
+    "name": "rollup-active-minutes",
+    "checks": "นาทีที่เคลื่อนไหว (ทางเลือกเสริม)",
+    "column": "-",
+    "method": "POST",
+    "path": "/v4/users/me/dataTypes/active-minutes/dataPoints:dailyRollUp",
+    "body": {"range": {"start": {"date": {"year": "{y}", "month": "{m}", "day": "{d}"}}, "end": {"date": {"year": "{ny}", "month": "{nm}", "day": "{nd}"}}}, "windowSizeDays": 1}
+  },
+  {
+    "name": "rollup-sedentary-period",
+    "checks": "เวลานั่งนิ่งรายวัน",
+    "column": "daily_activity.sedentary_min",
+    "method": "POST",
+    "path": "/v4/users/me/dataTypes/sedentary-period/dataPoints:dailyRollUp",
+    "body": {"range": {"start": {"date": {"year": "{y}", "month": "{m}", "day": "{d}"}}, "end": {"date": {"year": "{ny}", "month": "{nm}", "day": "{nd}"}}}, "windowSizeDays": 1}
+  },
+  {
+    "name": "rollup-heart-rate",
+    "checks": "สรุปชีพจรรายวัน (ดูว่ามีจำนวน sample หรือไม่ เพื่อใช้ประเมินเวลาสวมใส่)",
+    "column": "-",
+    "method": "POST",
+    "path": "/v4/users/me/dataTypes/heart-rate/dataPoints:dailyRollUp",
+    "body": {"range": {"start": {"date": {"year": "{y}", "month": "{m}", "day": "{d}"}}, "end": {"date": {"year": "{ny}", "month": "{nm}", "day": "{nd}"}}}, "windowSizeDays": 1}
+  },
+
+  {
+    "name": "list-daily-resting-heart-rate",
+    "checks": "ชีพจรขณะพักรายวัน และวันที่ที่ API ผูกค่าไว้",
+    "column": "daily_activity.resting_hr",
+    "method": "GET",
+    "path": "/v4/users/me/dataTypes/daily-resting-heart-rate/dataPoints",
+    "query": {"filter": "daily_resting_heart_rate.date >= \"{date}\" AND daily_resting_heart_rate.date < \"{next2}\""}
+  },
+  {
+    "name": "list-daily-heart-rate-variability",
+    "checks": "HRV ของคืนวัน D: ผูกกับวันที่ D หรือ D+1",
+    "column": "sleep_nights.hrv_ms",
+    "method": "GET",
+    "path": "/v4/users/me/dataTypes/daily-heart-rate-variability/dataPoints",
+    "query": {"filter": "daily_heart_rate_variability.date >= \"{date}\" AND daily_heart_rate_variability.date < \"{next2}\""}
+  },
+  {
+    "name": "list-daily-oxygen-saturation",
+    "checks": "SpO2 เฉลี่ยขณะนอน: ผูกกับวันที่ D หรือ D+1",
+    "column": "sleep_nights.spo2_avg",
+    "method": "GET",
+    "path": "/v4/users/me/dataTypes/daily-oxygen-saturation/dataPoints",
+    "query": {"filter": "daily_oxygen_saturation.date >= \"{date}\" AND daily_oxygen_saturation.date < \"{next2}\""}
+  },
+  {
+    "name": "list-daily-sleep-temperature-derivations",
+    "checks": "อุณหภูมิผิวหนังขณะนอน (nightly - baseline)",
+    "column": "sleep_nights.skin_temp_delta_c",
+    "method": "GET",
+    "path": "/v4/users/me/dataTypes/daily-sleep-temperature-derivations/dataPoints",
+    "query": {"filter": "daily_sleep_temperature_derivations.date >= \"{date}\" AND daily_sleep_temperature_derivations.date < \"{next2}\""}
+  },
+  {
+    "name": "list-daily-respiratory-rate",
+    "checks": "อัตราการหายใจขณะนอน (ตัวชี้วัดเสริม ยังไม่อยู่ใน schema)",
+    "column": "-",
+    "method": "GET",
+    "path": "/v4/users/me/dataTypes/daily-respiratory-rate/dataPoints",
+    "query": {"filter": "daily_respiratory_rate.date >= \"{date}\" AND daily_respiratory_rate.date < \"{next2}\""}
+  },
+  {
+    "name": "list-daily-resting-heart-rate-nofilter",
+    "checks": "สำรอง: ถ้า filter รูปแบบข้างบนใช้ไม่ได้ ดูข้อมูลล่าสุดโดยไม่ใช้ filter",
+    "column": "-",
+    "method": "GET",
+    "path": "/v4/users/me/dataTypes/daily-resting-heart-rate/dataPoints",
+    "query": {"pageSize": "5"}
+  },
+
+  {
+    "name": "list-sleep",
+    "checks": "โครงสร้างช่วงการนอน: stages, summary, metadata.mainSleep / nap ในช่วง D 12:00 ถึง D+1 12:00",
+    "column": "sleep_sessions.*",
+    "method": "GET",
+    "path": "/v4/users/me/dataTypes/sleep/dataPoints",
+    "query": {"filter": "sleep.interval.civil_end_time >= \"{date}T12:00:00\" AND sleep.interval.civil_end_time < \"{next2}T00:00:00\""},
+    "paginate": true
+  },
+  {
+    "name": "list-sleep-nofilter",
+    "checks": "สำรอง: การนอนล่าสุดโดยไม่ใช้ filter",
+    "column": "-",
+    "method": "GET",
+    "path": "/v4/users/me/dataTypes/sleep/dataPoints",
+    "query": {"pageSize": "5"}
+  },
+
+  {
+    "name": "list-heart-rate",
+    "checks": "ชีพจรรายนาทีทั้งวัน: ตัวแทน 'เวลาที่สวมใส่' = จำนวนนาทีที่มีค่าชีพจร (OQ5.1)",
+    "column": "daily_activity.wear_minutes",
+    "method": "GET",
+    "path": "/v4/users/me/dataTypes/heart-rate/dataPoints",
+    "query": {"filter": "heart_rate.sample_time.civil_time >= \"{date}T00:00:00\" AND heart_rate.sample_time.civil_time < \"{next}T00:00:00\"", "pageSize": "10000"},
+    "paginate": true
+  },
+  {
+    "name": "list-activity-level",
+    "checks": "ระดับกิจกรรมตลอดวัน: อาจบอกช่วงที่ไม่ได้สวม (ตัวแทนเวลาสวมใส่แบบที่ 2)",
+    "column": "daily_activity.wear_minutes (ทางเลือก)",
+    "method": "GET",
+    "path": "/v4/users/me/dataTypes/activity-level/dataPoints",
+    "query": {"filter": "activity_level.interval.civil_start_time >= \"{date}T00:00:00\" AND activity_level.interval.civil_start_time < \"{next}T00:00:00\"", "pageSize": "10000"},
+    "paginate": true
+  },
+  {
+    "name": "list-sedentary-period",
+    "checks": "ช่วงนั่งนิ่งรายช่วง (ใช้ตรวจสอบ rollup)",
+    "column": "-",
+    "method": "GET",
+    "path": "/v4/users/me/dataTypes/sedentary-period/dataPoints",
+    "query": {"filter": "sedentary_period.interval.civil_start_time >= \"{date}T00:00:00\" AND sedentary_period.interval.civil_start_time < \"{next}T00:00:00\""},
+    "paginate": true
+  },
+  {
+    "name": "v4beta-skin-temperature-sensors",
+    "checks": "อุณหภูมิผิวหนังดิบ (v4beta, RK5) เผื่อ daily-sleep-temperature-derivations ไม่มีค่า",
+    "column": "-",
+    "method": "GET",
+    "path": "/v4beta/users/me/dataTypes/skin-temperature-sensors/dataPoints",
+    "query": {"pageSize": "50"}
+  }
+]

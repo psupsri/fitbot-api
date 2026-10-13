@@ -1,0 +1,12 @@
+# ค่าลับและ token ห้ามขึ้น GitHub
+.env
+.spike/
+# ข้อมูลสุขภาพจริงจาก spike ห้ามขึ้น GitHub
+fixtures/
+/spike
+/bin/
+
+# macOS
+.DS_Store
+# ค่าตั้งค่าเฉพาะเครื่อง (ดูตัวอย่างที่ config.example.yaml)
+config.yaml

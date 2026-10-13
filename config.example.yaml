@@ -1,0 +1,53 @@
+# การตั้งค่าของ Fitbot (ไม่มีค่าลับ) คัดลอกเป็น config.yaml แล้วปรับได้โดยไม่ต้องแก้โค้ด
+# ค่าลับอยู่ใน .env: FITBOT_DATABASE_URL, FITBOT_ENCRYPTION_KEY,
+#                    GOOGLE_HEALTH_CLIENT_ID, GOOGLE_HEALTH_SECRET, LINE_CHANNEL_ACCESS_TOKEN
+
+# ค่าเริ่มต้นเมื่อเพิ่มผู้ใช้ใหม่ (F2)
+user_defaults:
+  timezone: Asia/Bangkok
+  sleep_window_start: "18:00"   # ช่วงคืนวัน D เริ่ม (FR19)
+  sleep_window_end: "12:00"     # ช่วงคืนวัน D สิ้นสุด (วัน D+1)
+  resync_gap_minutes: 120       # ระยะห่างก่อนส่งรายงานบางส่วน (FR10–13)
+
+google_health:
+  base_url: https://health.googleapis.com
+  redirect_port: 8765           # ต้องลงทะเบียน http://localhost:8765/callback ใน Google Cloud
+  refresh_token_ttl_hours: 168  # โหมด Testing: refresh token หมดอายุใน 7 วัน (D8)
+  warn_before_hours: 24         # เตือนทาง LINE เมื่อเหลือไม่เกินเท่านี้
+  age_refresh_days: 30          # อัปเดตอายุจาก profile อย่างน้อยทุกกี่วัน (FR22)
+  max_retries: 3                # ลองซ้ำเมื่อผิดพลาดชั่วคราว (429/5xx)
+
+sleep:
+  merge_gap_minutes: 90         # ช่วงการนอนที่ห่างกันไม่เกินนี้ในคืนเดียวกันรวมเป็นการนอนหลักเดียว (F5)
+
+wear:
+  min_ratio: 0.5                # สวมไม่ถึงสัดส่วนนี้ของวัน = ข้อมูลกิจกรรมเป็น "ไม่มีข้อมูล" (FR25)
+
+line:
+  base_url: https://api.line.me
+
+# Metrics Engine (F7) ค่าตั้งต้นตาม Q12–Q14
+analysis:
+  windows: [7, 30, 60, 90]
+  max_lookback_days: 90       # อ่านข้อมูลย้อนหลังไม่เกิน (FR24)
+  min_days_for_average: 3     # ค่าเฉลี่ยต้องมีข้อมูลอย่างน้อยกี่วัน
+  trend_min_days: 14          # แนวโน้มต้องมีข้อมูลใน 30 วันอย่างน้อยกี่วัน
+  trend_threshold_pct: 5      # เปลี่ยนเกินกี่ % จึงถือว่าเพิ่ม/ลด
+  baseline_min_days: 14       # กฎค่าส่วนตัวเริ่มใช้เมื่อมีข้อมูลอย่างน้อยกี่วัน (FR20)
+
+# กฎค่าผิดปกติ (F8) ว่าง = ใช้ internal/anomaly/rules.yaml ที่ฝังใน binary
+anomaly:
+  rules_file: ""
+
+report:
+  max_message_runes: 4500     # LINE รับ 5,000 ตัวอักษรต่อข้อความ เผื่อไว้
+
+# LLM Coaching (F9) แบบ OpenAI-compatible เปลี่ยนเป็น AI บน cloud ได้ด้วย base_url + model + LLM_API_KEY ใน .env
+llm:
+  enabled: true
+  base_url: http://localhost:11434/v1   # Ollama
+  model: qwen3.5:9b
+  temperature: 0.3
+  timeout_seconds: 120                  # เกินนี้ใช้รายงาน template แทน (D5)
+  reasoning_effort: none                # ปิดส่วน thinking (RK8) ทดสอบแล้ว: ตอบใน ~2 วิ แทน ~70 วิ
+  json_mode: true

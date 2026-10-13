@@ -1,0 +1,80 @@
+# กฎค่าผิดปกติ (F8) — กฎตัวเลขเป็นตัวตัดสิน LLM เพิ่มหรือตัดไม่ได้ (FR17)
+# ปรับได้โดยไม่แก้โค้ด: คัดลอกไฟล์นี้ แล้วตั้ง anomaly.rules_file ใน config.yaml
+#
+# level:  watch   = ค่าที่ควรเฝ้าระวัง (section 6 พร้อม disclaimer)
+#         improve = ควรปรับปรุง (section 5)
+# kind:   threshold = เทียบเกณฑ์ตายตัว  stat: today | avg7
+#         personal  = เทียบค่าปกติของผู้ใช้ เริ่มใช้เมื่อมีข้อมูลอย่างน้อย baseline_min_days วัน (FR20)
+
+rules:
+  - id: sleep_avg7_watch
+    metric: asleep_min
+    label: การนอนหลัก
+    level: watch
+    kind: threshold
+    stat: avg7
+    op: "<"
+    threshold: 300
+    criterion: เฉลี่ย 7 วันน้อยกว่า 5 ชม.
+    reference: เกณฑ์ที่ Product Owner กำหนด (Q27)
+
+  - id: sleep_avg7_improve
+    metric: asleep_min
+    label: การนอนหลัก
+    level: improve
+    kind: threshold
+    stat: avg7
+    op: "<"
+    threshold: 360
+    criterion: เฉลี่ย 7 วันน้อยกว่า 6 ชม.
+    reference: เกณฑ์ที่ Product Owner กำหนด (Q27)
+
+  - id: rhr_high
+    metric: resting_hr
+    level: watch
+    kind: threshold
+    stat: today
+    op: ">"
+    threshold: 100
+    criterion: มากกว่า 100 bpm
+    reference: ช่วงปกติ 60–100 bpm ของ American Heart Association
+
+  - id: rhr_low
+    metric: resting_hr
+    level: watch
+    kind: threshold
+    stat: today
+    op: "<"
+    threshold: 40
+    criterion: น้อยกว่า 40 bpm
+    reference: bradycardia ทั่วไปคือต่ำกว่า 60 bpm (AHA) ใช้ 40 เพราะคนที่ออกกำลังกายสม่ำเสมออาจต่ำได้ถึงราว 40
+
+  - id: spo2_low
+    metric: spo2_avg
+    level: watch
+    kind: threshold
+    stat: today
+    op: "<"
+    threshold: 90
+    criterion: น้อยกว่า 90%
+    reference: นิยามภาวะออกซิเจนต่ำ (hypoxaemia) ของ WHO ที่ SpO2 ต่ำกว่า 90%
+
+  - id: hrv_low
+    metric: hrv_ms
+    level: watch
+    kind: personal
+    direction: below
+    sd_multiplier: 2
+    baseline_days: 30
+    consecutive: 3
+    reference: ค่าปกติของผู้ใช้เอง
+
+  - id: skin_temp_deviation
+    metric: skin_temp_delta_c
+    level: watch
+    kind: personal
+    direction: both
+    sd_multiplier: 2
+    baseline_days: 30
+    consecutive: 2
+    reference: ค่าปกติของผู้ใช้เอง
