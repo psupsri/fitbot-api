@@ -113,6 +113,31 @@ func TestRunBeforeSyncThenPartial(t *testing.T) {
 	}
 }
 
+// สั่งจาก dashboard: ข้อมูลไม่ครบก็ส่งรายงานบางส่วนทันที แต่ยังไม่ส่งซ้ำ
+func TestSendPartialNow(t *testing.T) {
+	e := setup(t, "t_orch_partial_now")
+	e.health.Set(func(f *testutil.FakeHealth) { f.HasSleep = false })
+	run := func() Result {
+		res, err := e.o.Run(context.Background(), Options{SendPartialNow: true})
+		if err != nil || len(res) != 1 {
+			t.Fatalf("res=%v err=%v", res, err)
+		}
+		return res[0]
+	}
+	if r := run(); r.Action != ActPartialReport || len(e.line.Sent) != 1 {
+		t.Fatalf("ต้องส่งรายงานบางส่วนทันทีโดยไม่ส่งข้อความให้ sync: %+v", r)
+	}
+	if !strings.Contains(strings.Join(e.line.Sent[0], ""), "รายงานนี้ยังไม่ครบ") {
+		t.Fatal("รายงานบางส่วนต้องบอกว่าข้อมูลไม่ครบ")
+	}
+	if rep, _ := e.st.GetReport(context.Background(), e.user.ID, time.Date(2026, 10, 12, 0, 0, 0, 0, time.UTC)); rep.State != store.ReportPartialSent {
+		t.Fatalf("state = %s", rep.State)
+	}
+	if r := run(); r.Action != ActSkip || len(e.line.Sent) != 1 {
+		t.Fatalf("ส่งแล้วต้องไม่ส่งซ้ำ: %+v", r)
+	}
+}
+
 func TestRunCompleteSendsFullReportOnce(t *testing.T) {
 	e := setup(t, "t_orch_full")
 	if r := e.run(t); r.Action != ActFullReport || len(e.line.Sent) != 1 {

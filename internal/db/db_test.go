@@ -37,14 +37,14 @@ func TestMigrateUpDown(t *testing.T) {
 			t.Errorf("ตาราง %s ไม่มี user_id", n)
 		}
 	}
-	if _, err := db.Down(ctx, pool, 1); err != nil {
+	if _, err := db.Down(ctx, pool, 100); err != nil { // ย้อนทุก migration
 		t.Fatal(err)
 	}
 	if n := len(tables()); n != 0 {
 		t.Fatalf("หลัง down ยังเหลือ %d ตาราง", n)
 	}
-	if _, err := db.Up(ctx, pool); err != nil {
-		t.Fatal(err)
+	if done, err := db.Up(ctx, pool); err != nil || len(done) < 2 {
+		t.Fatalf("up ต้องทำทุก migration อีกครั้ง ได้ %v, %v", done, err)
 	}
 	if done, _ := db.Up(ctx, pool); len(done) != 0 {
 		t.Fatal("up ซ้ำต้องไม่ทำอะไร")

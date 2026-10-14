@@ -8,6 +8,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"fitbot/internal/coach"
 	"fitbot/internal/completeness"
 	"fitbot/internal/dateutil"
 	"fitbot/internal/metrics"
@@ -115,6 +116,28 @@ func (s *Store) FirstDataDate(ctx context.Context, userID int64) (*time.Time, er
 	return d, err
 }
 
+// LastDataDate คือวันล่าสุดที่มีข้อมูลของผู้ใช้ (วันเริ่มต้นของ dashboard)
+func (s *Store) LastDataDate(ctx context.Context, userID int64) (*time.Time, error) {
+	var d *time.Time
+	err := s.pool.QueryRow(ctx, `SELECT MAX(date) FROM (
+		SELECT date FROM daily_activity WHERE user_id = $1 UNION ALL SELECT date FROM sleep_nights WHERE user_id = $1) t`, userID).Scan(&d)
+	return d, err
+}
+
+// GetStatus คืนสถานะความครบของวัน D (nil = ยังไม่เคยตรวจ)
+func (s *Store) GetStatus(ctx context.Context, userID int64, d time.Time) (*completeness.Status, error) {
+	var st completeness.Status
+	err := s.pool.QueryRow(ctx, `SELECT activity_status, sleep_status FROM daily_status WHERE user_id = $1 AND date = $2`,
+		userID, d).Scan(&st.Activity, &st.Sleep)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &st, nil
+}
+
 // ---------- daily_reports (F12) ----------
 
 const (
@@ -129,12 +152,15 @@ type Report struct {
 	SyncNoticeSentAt *time.Time
 	ReportSentAt     *time.Time
 	Content          *string
+	LLMUsed          *bool
+	Coaching         *coach.Coaching // nil = ไม่มีส่วนจาก AI หรือรายงานที่ส่งก่อน migration 0002
 }
 
 func (s *Store) GetReport(ctx context.Context, userID int64, d time.Time) (Report, error) {
 	r := Report{State: ReportPending}
-	err := s.pool.QueryRow(ctx, `SELECT state, sync_notice_sent_at, report_sent_at, content
-		FROM daily_reports WHERE user_id = $1 AND report_date = $2`, userID, d).Scan(&r.State, &r.SyncNoticeSentAt, &r.ReportSentAt, &r.Content)
+	err := s.pool.QueryRow(ctx, `SELECT state, sync_notice_sent_at, report_sent_at, content, llm_used, coaching
+		FROM daily_reports WHERE user_id = $1 AND report_date = $2`, userID, d).Scan(&r.State, &r.SyncNoticeSentAt, &r.ReportSentAt,
+		&r.Content, &r.LLMUsed, &r.Coaching)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return r, nil
 	}
@@ -151,14 +177,15 @@ func (s *Store) MarkSyncNoticeSent(ctx context.Context, userID int64, d, at time
 }
 
 // MarkReportSent บันทึกว่าส่งรายงานแล้ว (ไม่เขียนทับรายงานที่ส่งไปแล้ว เพื่อให้ไม่เกิน 1 ฉบับต่อวัน)
-func (s *Store) MarkReportSent(ctx context.Context, userID int64, d, at time.Time, state, content string, llmUsed bool) error {
+// coaching คือส่วนจาก AI ที่ใช้ในรายงาน (nil = แบบ template) เก็บแยกให้ dashboard
+func (s *Store) MarkReportSent(ctx context.Context, userID int64, d, at time.Time, state, content string, coaching *coach.Coaching) error {
 	if state != ReportSent && state != ReportPartialSent {
 		return fmt.Errorf("state ไม่ถูกต้อง: %s", state)
 	}
-	_, err := s.pool.Exec(ctx, `INSERT INTO daily_reports (user_id, report_date, state, report_sent_at, content, llm_used, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, now())
+	_, err := s.pool.Exec(ctx, `INSERT INTO daily_reports (user_id, report_date, state, report_sent_at, content, llm_used, coaching, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, now())
 		ON CONFLICT (user_id, report_date) DO UPDATE SET state = EXCLUDED.state, report_sent_at = EXCLUDED.report_sent_at,
-			content = EXCLUDED.content, llm_used = EXCLUDED.llm_used, updated_at = now()
-		WHERE daily_reports.state NOT IN ('report_sent', 'partial_report_sent')`, userID, d, state, at, content, llmUsed)
+			content = EXCLUDED.content, llm_used = EXCLUDED.llm_used, coaching = EXCLUDED.coaching, updated_at = now()
+		WHERE daily_reports.state NOT IN ('report_sent', 'partial_report_sent')`, userID, d, state, at, content, coaching != nil, coaching)
 	return err
 }

@@ -36,6 +36,10 @@ const usage = `fitbot — โค้ชสุขภาพ AI (MVP สั่งร
   dev seed --user ID [--days N]
                      สร้างข้อมูลจำลอง (เฉพาะฐานข้อมูลที่ชื่อลงท้าย _dev)
 
+Dashboard (fitbot-web ระยะ 1)
+  serve [--addr 127.0.0.1:8787] [--web ../fitbot-web/dist]
+                     HTTP API ให้ dashboard อ่านข้อมูลและสั่งส่งรายงาน ฟังเฉพาะในเครื่อง (ยังไม่มีล็อกอิน)
+
 ทำงานอัตโนมัติ (macOS launchd)
   schedule install [--mode run|collect]   รันเองทุกวัน 08:00–20:00 ทุก 2 ชม. และตอน login (ค่าเริ่มต้น: run)
   schedule status | schedule run-now | schedule uninstall
@@ -143,6 +147,8 @@ func run(ctx context.Context, args []string) error {
 		return a.devSeed(ctx, rest[1:])
 	case "schedule":
 		return a.schedule(ctx, sub, rest[min(1, len(rest)):])
+	case "serve":
+		return a.serve(ctx, rest)
 	case "line":
 		if sub != "test" {
 			return errors.New("ใช้ fitbot line test --user ID")

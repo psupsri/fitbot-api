@@ -38,6 +38,9 @@ type Orchestrator struct {
 type Options struct {
 	Date   *time.Time // nil = เมื่อวานตาม timezone ของผู้ใช้ (FR18)
 	UserID int64      // 0 = ทุกผู้ใช้ที่เปิดใช้งาน
+	// SendPartialNow: ข้อมูลไม่ครบก็ส่งรายงานบางส่วนทันที ไม่ส่งข้อความให้ sync และไม่รอ resync gap
+	// (ผู้ใช้สั่งเองจาก dashboard) กฎ 1 ยังใช้: ส่งแล้วไม่ส่งซ้ำ
+	SendPartialNow bool
 }
 
 type Result struct {
@@ -133,6 +136,9 @@ func (o *Orchestrator) process(ctx context.Context, u model.User, opts Options) 
 	// 4. ตัดสินตามกฎ 5 ข้อ
 	gap := time.Duration(u.ResyncGapMinutes) * time.Minute
 	dec := Decide(rep, st.Complete(), now, gap)
+	if opts.SendPartialNow && (dec.Action == ActSyncNotice || dec.Action == ActWait) {
+		dec = Decision{Action: ActPartialReport}
+	}
 	res.Action = dec.Action
 
 	switch dec.Action {
@@ -156,7 +162,7 @@ func (o *Orchestrator) process(ctx context.Context, u model.User, opts Options) 
 	case ActFullReport, ActPartialReport:
 		// 5–6. คำนวณ ประกอบรายงาน ส่ง แล้วอัปเดตสถานะ
 		partial := dec.Action == ActPartialReport
-		out, llmUsed, err := o.BuildReport(ctx, u, d, partial, missing)
+		out, coaching, err := o.BuildReport(ctx, u, d, partial, missing)
 		if err != nil {
 			return fail(err)
 		}
@@ -168,25 +174,25 @@ func (o *Orchestrator) process(ctx context.Context, u model.User, opts Options) 
 			state = store.ReportPartialSent
 		}
 		if !o.DryRun {
-			if err := o.Store.MarkReportSent(ctx, u.ID, d, o.Now(), state, out.Text, llmUsed); err != nil {
+			if err := o.Store.MarkReportSent(ctx, u.ID, d, o.Now(), state, out.Text, coaching); err != nil {
 				return fail(err)
 			}
 		}
-		res.Detail = fmt.Sprintf("ส่งรายงาน %d ข้อความ (AI: %v)", len(out.Messages), llmUsed)
+		res.Detail = fmt.Sprintf("ส่งรายงาน %d ข้อความ (AI: %v)", len(out.Messages), coaching != nil)
 	}
 	return res
 }
 
 // BuildReport อ่านข้อมูลย้อนหลังสูงสุด 90 วันจากฐานข้อมูล คำนวณ ประเมินกฎ ขอคำแนะนำจาก AI แล้วประกอบรายงาน
-// คืน llmUsed = ส่วนจาก AI ถูกใช้ในรายงานหรือไม่
-func (o *Orchestrator) BuildReport(ctx context.Context, u model.User, d time.Time, partial bool, missing []string) (report.Output, bool, error) {
+// คืนส่วนจาก AI ที่ใช้ในรายงาน (nil = รายงานแบบ template) เพื่อเก็บแยกให้ dashboard
+func (o *Orchestrator) BuildReport(ctx context.Context, u model.User, d time.Time, partial bool, missing []string) (report.Output, *coach.Coaching, error) {
 	rows, err := o.Store.History(ctx, u.ID, d, o.Cfg.Analysis.MaxLookbackDays)
 	if err != nil {
-		return report.Output{}, false, err
+		return report.Output{}, nil, err
 	}
 	first, err := o.Store.FirstDataDate(ctx, u.ID)
 	if err != nil {
-		return report.Output{}, false, err
+		return report.Output{}, nil, err
 	}
 	if fresh, err := o.Store.GetUser(ctx, u.ID); err == nil {
 		u = fresh // อายุอาจเพิ่งถูกอัปเดตระหว่างดึงข้อมูล
@@ -202,7 +208,7 @@ func (o *Orchestrator) BuildReport(ctx context.Context, u model.User, d time.Tim
 		}
 		in.Coaching = c
 	}
-	return report.Compose(in, o.Cfg.Report.MaxMessageRunes), in.Coaching != nil, nil
+	return report.Compose(in, o.Cfg.Report.MaxMessageRunes), in.Coaching, nil
 }
 
 func (o *Orchestrator) send(ctx context.Context, u model.User, msgs []string) error {

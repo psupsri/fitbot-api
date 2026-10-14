@@ -19,6 +19,7 @@ go build -o bin/fitbot ./cmd/fitbot
 ./bin/fitbot auth --user 1
 ./bin/fitbot run --dry-run           # ดูรายงานโดยไม่ส่ง
 ./bin/fitbot schedule install        # ทำงานอัตโนมัติ
+./bin/fitbot serve                   # API ให้ dashboard (fitbot-web) ฟังเฉพาะ 127.0.0.1:8787
 ```
 
 `go test ./...` (integration test ใช้ฐานข้อมูล `fitbot_test` บนเครื่อง ถ้าไม่มีจะข้าม)
@@ -32,5 +33,6 @@ go build -o bin/fitbot ./cmd/fitbot
 | [docs/M2-report.md](docs/M2-report.md) | รายงาน, กฎ 5 ข้อ, Metrics และ Anomaly rules |
 | [docs/M3-ai-coaching.md](docs/M3-ai-coaching.md) | AI coaching, guardrail, ผลประเมิน |
 | [docs/automation.md](docs/automation.md) | การทำงานอัตโนมัติด้วย launchd |
+| [docs/dashboard-api.md](docs/dashboard-api.md) | HTTP API แบบอ่านอย่างเดียวสำหรับ dashboard |
 
 > คำแนะนำจาก Fitbot มาจาก AI และระบบอัตโนมัติ ไม่ใช่คำวินิจฉัยของแพทย์

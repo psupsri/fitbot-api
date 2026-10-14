@@ -110,7 +110,7 @@ func (a *app) reportPreview(ctx context.Context, args []string) error {
 	}
 	st := completeness.Evaluate(act, night)
 	start := time.Now()
-	out, llmUsed, err := o.BuildReport(ctx, u, d, !st.Complete(), completeness.MissingParts(st))
+	out, coaching, err := o.BuildReport(ctx, u, d, !st.Complete(), completeness.MissingParts(st))
 	if err != nil {
 		return err
 	}
@@ -118,7 +118,7 @@ func (a *app) reportPreview(ctx context.Context, args []string) error {
 	for i, m := range out.Messages {
 		fmt.Printf("──── ข้อความ %d/%d (%d ตัวอักษร) ────\n%s\n\n", i+1, len(out.Messages), len([]rune(m)), m)
 	}
-	fmt.Printf("AI: %v · ใช้เวลา %s\n", llmUsed, elapsed)
+	fmt.Printf("AI: %v · ใช้เวลา %s\n", coaching != nil, elapsed)
 	return nil
 }
 
